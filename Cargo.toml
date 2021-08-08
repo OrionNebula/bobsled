@@ -8,6 +8,8 @@ edition = "2018"
 [features]
 default = ["greedy"]
 
+all = ["greedy", "sled", "widestring"]
+
 # Enables the GreedyKey structure, used to alter the way variable-length data is encoded/decoded
 greedy = []
 

@@ -1,4 +1,10 @@
-use std::{convert::Infallible, ffi::{OsStr, OsString}, ops::Deref, path::{Path, PathBuf}, str::Utf8Error};
+use std::{
+    convert::Infallible,
+    ffi::{OsStr, OsString},
+    ops::Deref,
+    path::{Path, PathBuf},
+    str::Utf8Error,
+};
 
 use crate::{DecodeKey, EncodeKey, PrefixKey};
 
