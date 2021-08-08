@@ -80,7 +80,7 @@ pub trait Record: Sized {
     fn remove<S: WriteStore<Self>>(
         store: S,
         key: &Self::Key,
-    ) -> Result<(), WriteStoreError<S::Error, Self::EncodeError>> {
+    ) -> Result<(), S::Error> {
         store.remove(key)
     }
 }

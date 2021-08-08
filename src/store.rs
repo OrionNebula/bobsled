@@ -179,7 +179,7 @@ pub trait WriteStore<R: Record> {
     type Error: std::error::Error;
 
     fn persist(self, record: &R) -> Result<(), WriteStoreError<Self::Error, R::EncodeError>>;
-    fn remove(self, key: &R::Key) -> Result<(), WriteStoreError<Self::Error, R::EncodeError>>;
+    fn remove(self, key: &R::Key) -> Result<(), Self::Error>;
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -211,7 +211,7 @@ impl<'a, R: Record> WriteStore<R> for &'a mut BTreeMap<Vec<u8>, Vec<u8>> {
         Ok(())
     }
 
-    fn remove(self, key: &R::Key) -> Result<(), WriteStoreError<Self::Error, R::EncodeError>> {
+    fn remove(self, key: &R::Key) -> Result<(), Self::Error> {
         self.remove(key.encode().as_ref());
 
         Ok(())
@@ -353,11 +353,8 @@ const _: () = {
             }
         }
 
-        fn remove(self, key: &R::Key) -> Result<(), WriteStoreError<Self::Error, R::EncodeError>> {
-            match self.remove(key.encode().as_ref()) {
-                Ok(_) => Ok(()),
-                Err(err) => Err(WriteStoreError::StoreError(err)),
-            }
+        fn remove(self, key: &R::Key) -> Result<(), Self::Error> {
+            self.remove(key.encode().as_ref()).and(Ok(()))
         }
     }
 
@@ -416,11 +413,8 @@ const _: () = {
             }
         }
 
-        fn remove(self, key: &R::Key) -> Result<(), WriteStoreError<Self::Error, R::EncodeError>> {
-            match self.remove(key.encode().as_ref()) {
-                Ok(_) => Ok(()),
-                Err(err) => Err(WriteStoreError::StoreError(err)),
-            }
+        fn remove(self, key: &R::Key) -> Result<(), Self::Error> {
+            self.remove(key.encode().as_ref()).and(Ok(()))
         }
     }
 
@@ -438,7 +432,7 @@ const _: () = {
             Ok(())
         }
 
-        fn remove(self, key: &R::Key) -> Result<(), WriteStoreError<Self::Error, R::EncodeError>> {
+        fn remove(self, key: &R::Key) -> Result<(), Self::Error> {
             self.remove(key.encode().as_ref());
 
             Ok(())
