@@ -1,5 +1,5 @@
 use std::{
-    convert::Infallible,
+    convert::{Infallible, TryInto},
     ffi::{OsStr, OsString},
     ops::Deref,
     path::{Path, PathBuf},
@@ -86,27 +86,62 @@ impl EncodeKey for GreedyKey<OsString> {
 
         self.as_os_str().as_bytes().to_owned()
     }
+
+    #[cfg(windows)]
+    fn encode(&self) -> Self::Bytes {
+        use std::os::windows::ffi::OsStrExt;
+
+        self.as_os_str()
+            .encode_wide()
+            .flat_map(|c| std::array::IntoIter::new(c.to_be_bytes()))
+            .collect()
+    }
 }
 
-#[cfg(unix)]
 impl DecodeKey for GreedyKey<OsString> {
     type Error = Infallible;
 
+    #[cfg(unix)]
     fn try_decode(bytes: &[u8]) -> Result<(Self, &[u8]), Self::Error> {
         use std::os::unix::ffi::OsStringExt;
 
         Ok((GreedyKey(OsString::from_vec(bytes.into())), &[]))
     }
+
+    #[cfg(windows)]
+    fn try_decode(bytes: &[u8]) -> Result<(Self, &[u8]), Self::Error> {
+        use std::os::windows::ffi::OsStringExt;
+
+        let wide = bytes
+            .chunks_exact(std::mem::size_of::<u16>())
+            .map(|chunk| u16::from_be_bytes(chunk.try_into().unwrap()))
+            .collect::<Vec<u16>>();
+
+        Ok((GreedyKey(OsString::from_wide(&wide)), &[]))
+    }
 }
 
-#[cfg(unix)]
 impl<'a> EncodeKey for GreedyKey<&'a OsStr> {
+    #[cfg(unix)]
     type Bytes = &'a [u8];
 
+    #[cfg(windows)]
+    type Bytes = Vec<u8>;
+
+    #[cfg(unix)]
     fn encode(&self) -> Self::Bytes {
         use std::os::unix::ffi::OsStrExt;
 
         self.0.as_bytes()
+    }
+
+    #[cfg(windows)]
+    fn encode(&self) -> Self::Bytes {
+        use std::os::windows::ffi::OsStrExt;
+
+        self.encode_wide()
+            .flat_map(|c| std::array::IntoIter::new(c.to_be_bytes()))
+            .collect()
     }
 }
 
@@ -130,7 +165,10 @@ impl DecodeKey for GreedyKey<PathBuf> {
 }
 
 impl<'a> EncodeKey for GreedyKey<&'a Path> {
+    #[cfg(unix)]
     type Bytes = <GreedyKey<&'a str> as EncodeKey>::Bytes;
+    #[cfg(windows)]
+    type Bytes = <GreedyKey<Vec<u8>> as EncodeKey>::Bytes;
 
     fn encode(&self) -> Self::Bytes {
         GreedyKey(self.as_os_str()).encode()
